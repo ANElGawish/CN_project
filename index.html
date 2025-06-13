@@ -2,47 +2,51 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>HLS Manual Resolution Selector</title>
+  <title>Hybrid HLS Player</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    video { width: 640px; height: 360px; margin-top: 10px; }
+  </style>
 </head>
 <body>
-  <h2>HLS Multi-Resolution Stream</h2>
-  
+  <h2>HLS Hybrid Adaptive/Manual Stream</h2>
+
   <label for="quality">Select Quality:</label>
   <select id="quality">
-    <option value="1080p.m3u8">1080p</option>
-    <option value="720p.m3u8">720p</option>
-    <option value="360p.m3u8">360p</option>
+    <option value="auto">Auto (Adaptive)</option>
   </select>
 
   <br><br>
-  <video id="video" controls width="640" height="360"></video>
+  <video id="video" controls></video>
 
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
     const video = document.getElementById('video');
-    const selector = document.getElementById('quality');
-    let hls;
+    const qualitySelector = document.getElementById('quality');
+    const hls = new Hls();
 
-    function loadStream(playlist) {
-      if (hls) {
-        hls.destroy();
-      }
+    hls.loadSource('master.m3u8');
+    hls.attachMedia(video);
 
-      hls = new Hls();
-      hls.loadSource(playlist);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, function () {
-        video.play();
+    hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+      // Populate quality selector
+      data.levels.forEach((level, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.text = `${level.height}p`;
+        qualitySelector.appendChild(option);
       });
-    }
 
-    // Initial load (1080p)
-    loadStream('1080p.m3u8');
+      video.play();
+    });
 
-    // Handle dropdown change
-    selector.addEventListener('change', function () {
-      video.pause();
-      loadStream(this.value);
+    qualitySelector.addEventListener('change', function () {
+      const selected = this.value;
+      if (selected === 'auto') {
+        hls.currentLevel = -1; // Let HLS.js auto switch
+      } else {
+        hls.currentLevel = parseInt(selected);
+      }
     });
   </script>
 </body>
